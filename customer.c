@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include "utils.h"
 
 int main() {
+	srand(time(NULL));
 	// Simulate customer arrival
 	int group_size = rand() % 3 + 1; // Random group size between 1 and 3
      	printf("Customer group of %d entering...\n", group_size);
