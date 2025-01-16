@@ -1,18 +1,16 @@
-# Makefile dla projektu bez plików obiektowych
-
 CC = gcc                # Kompilator
 CFLAGS = -Wall -g       # Flagi kompilatora
 
 # Nazwy plików wykonywalnych
-EXECUTABLES = main manager firefighter customer
+EXECUTABLES = main cashier firefighter customer
 
 all: $(EXECUTABLES)
 
 main: main.c utils.c utils.h
 	$(CC) $(CFLAGS) -o main main.c utils.c
 
-manager: manager.c utils.c utils.h
-	$(CC) $(CFLAGS) -o manager manager.c utils.c
+cashier: cashier.c utils.c utils.h
+	$(CC) $(CFLAGS) -o cashier cashier.c utils.c
 
 firefighter: firefighter.c utils.c utils.h
 	$(CC) $(CFLAGS) -o firefighter firefighter.c utils.c
