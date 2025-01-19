@@ -7,7 +7,11 @@
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <string.h>
+#include <stdbool.h>
+#include <time.h>
 #include "utils.h"
+
+int shm_id = shmget(SHM_KEY, 0, 0640);
 
 // Function to check if other cashier processes are running
 int other_cashiers_running() {
@@ -26,9 +30,55 @@ int other_cashiers_running() {
     return count > 1;
 }
 
+void handle_message_queue(int duration) {
+    MessageAsk msg;
+
+    // Create or connect to the messageAsk queue
+    int msg_id = connect_to_mess_queue();
+    printf("Waiting for customers with msd_id = %d...", msg_id);
+    time_t start_time = time(NULL);
+
+    // Listen to the message queue during the specified duration
+    while (time(NULL) - start_time < duration) {
+        if (msgrcv(msg_id, &msg, sizeof(msg.group_size), 0, IPC_NOWAIT) != -1) {
+            printf("Received group of %d people (mtype=%ld).\n", msg.group_size, msg.mtype);
+            fflush(stdout); 
+ 
+            // Decide whether to allow entry (for simplicity, always allow here)
+            bool allow_entry = (msg.group_size > 0 && msg.group_size <= 4);
+
+            // Send a response back to the customer
+            msg.group_size = allow_entry ? 1 : 0; // 1 = allowed, 0 = denied
+            if (msgsnd(msg_id, &msg, sizeof(msg.group_size), 0) == -1) {
+                perror("Error sending response to customer");
+            } else {
+                printf("Responded to customer (mtype=%ld): %s\n",
+                       msg.mtype, allow_entry ? "Allowed" : "Denied");
+                fflush(stdout); 
+            }
+        } else if (errno != ENOMSG) {
+            perror("Error receiving message");
+        }
+
+        usleep(1000000); // Sleep for 0.5 seconds to reduce CPU usage
+    }
+
+    //clean up
+    struct msqid_ds msq_status;
+    if (msgctl(msg_id, IPC_STAT, &msq_status) == -1) {
+        perror("Error checking message queue status");
+    } else if (msq_status.msg_qnum == 0) {
+        if (msgctl(msg_id, IPC_RMID, NULL) == -1) {
+            perror("Error removing message queue");
+        } else {
+            printf("Message queue cleaned up.\n");
+        }
+    }
+
+}
+
 int main(int argc, char *argv[]) {
     int duration;
-    int shm_id = shmget(SHM_KEY, 0, 0640);
     if (shm_id != -1) {
         // Shared memory exists
         if (argc > 3) {
@@ -113,10 +163,10 @@ int main(int argc, char *argv[]) {
         // Free the dynamically allocated memory
         free(tables);
     }
+    printf("Cashier running for %d seconds...\n", duration);
 
     // Run the cashier process for the specified duration
-    printf("Cashier running for %d seconds...\n", duration);
-    sleep(duration);
+    handle_message_queue(duration);
 
     // Check if other cashier processes are running
     if (!other_cashiers_running()) {

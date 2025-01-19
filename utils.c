@@ -2,8 +2,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/shm.h>
+#include <sys/msg.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
+
+int connect_to_mess_queue() {
+    key_t key;
+    key = ftok("main.c", 1);
+    int msg_id = msgget(key, IPC_CREAT | 0640);
+    if (msg_id == -1) {
+        perror("Error creating/accessing message queue");
+        return EXIT_FAILURE;
+    }
+    return msg_id;
+}
 
 // Function to allocate shared memory
 int allocate_shared_memory(int total_tables) {
