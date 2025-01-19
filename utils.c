@@ -17,10 +17,51 @@ int connect_to_mess_queue() {
     return msg_id;
 }
 
-// Function to allocate shared memory
-int allocate_shared_memory(int total_tables) {
+int allocate_totalTab_shared_memory() {
     // Create a shared memory segment with minimal permissions
-    int shm_id = shmget(SHM_KEY, total_tables * sizeof(Table), IPC_CREAT | IPC_EXCL | 0640);
+    int shm_id = shmget(SHM_KEY_2, sizeof(int), IPC_CREAT | IPC_EXCL | 0640);
+    if (shm_id == -1) {
+        perror("Error creating shared memory segment");
+    }
+    return shm_id;
+}
+
+void write_totalTab_to_shared_memory(int shmid, int value) {
+    // Function to write value into shared memory
+    int *shared_mem = (int *)shmat(shmid, NULL, 0);
+    if (shared_mem == (void *)-1) {
+        perror("shmat failed");
+        exit(EXIT_FAILURE);
+    }
+    *shared_mem = value;
+
+    if (shmdt(shared_mem) == -1) {
+        perror("shmdt failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
+int get_totalTab_from_shared_memory(int shmid) {
+    // Attach the shared memory segment
+    int *shared_mem = (int *)shmat(shmid, NULL, 0);
+    if (shared_mem == (void *)-1) {
+        perror("shmat failed");
+        exit(EXIT_FAILURE);
+    }
+    int value = *shared_mem;
+
+    if (shmdt(shared_mem) == -1) {
+        perror("shmdt failed");
+        exit(EXIT_FAILURE);
+    }
+    return value;
+}
+
+
+// Function to allocate shared memory
+int allocate_tables_shared_memory(int total_tables) {
+    // Create a shared memory segment with minimal permissions
+    int shm_id = shmget(SHM_KEY_1, total_tables * sizeof(Table), IPC_CREAT | IPC_EXCL | 0640);
     if (shm_id == -1) {
         perror("Error creating shared memory segment");
     }
@@ -28,7 +69,8 @@ int allocate_shared_memory(int total_tables) {
 }
 
 // Function to write table data into shared memory
-int write_to_shared_memory(int shm_id, Table *tables, int total_tables) {
+int write_tables_to_shared_memory(Table *tables, int total_tables) {
+    int shm_id = shmget(SHM_KEY_1, 0, 0640);
     // Map the shared memory segment to the process's address space
     Table *shared_tables = (Table *)shmat(shm_id, NULL, 0);
     if (shared_tables == (void *)-1) {
@@ -51,9 +93,9 @@ int write_to_shared_memory(int shm_id, Table *tables, int total_tables) {
 }
 
 // Function to get the table array from shared memory
-Table* get_tables_from_shared_memory(key_t key, int *total_tables, int *shm_id_out) {
+Table* get_tables_from_shared_memory(int *total_tables) {
     // Get the shared memory ID
-    int shm_id = shmget(key, 0, 0640);
+    int shm_id = shmget(SHM_KEY_1, 0, 0640);
     if (shm_id == -1) {
         perror("Error accessing shared memory");
         return NULL;
@@ -76,11 +118,6 @@ Table* get_tables_from_shared_memory(key_t key, int *total_tables, int *shm_id_o
 
     // Calculate the number of tables
     *total_tables = shm_info.shm_segsz / sizeof(Table);
-
-    // Return the shared memory ID for later use
-    if (shm_id_out != NULL) {
-        *shm_id_out = shm_id;
-    }
 
     // Return the pointer to the shared memory
     return shared_tables;

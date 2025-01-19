@@ -30,36 +30,38 @@ int main(int argc, char *argv[]) {
     int customer_pid = (long)getpid();
     // Create or connect to the message queue
     int msg_id = connect_to_mess_queue();
-    msg.mtype = customer_pid;
+    msg.mtype = 1;
+    msg.pid = customer_pid;
     msg.group_size = group_size;
-
-    int admitted = 0; // Flag to indicate if the group was admitted
-
+    msg.table_index = -1;
     // Send request to the cashier
-    if (msgsnd(msg_id, &msg, sizeof(msg.group_size), 0) == -1) {
+    if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
         perror("Error sending message");
         return EXIT_FAILURE;
     }
-    printf("Customer %d: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
+    printf("\033[1;35m[Customer %d]\033[0m: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
     sleep(1);
 
     MessageAsk response;
 
     // Wait for a response from the cashier
-    if (msgrcv(msg_id, &response, sizeof(msg.group_size), customer_pid, 0) == -1) {
+    if (msgrcv(msg_id, &response, sizeof(msg) - sizeof(msg.mtype), customer_pid, 0) == -1) {
         perror("Error receiving response");
         return EXIT_FAILURE;
     }
 
-    printf("response.admitted: %d\n", response.group_size);
-
     if (response.group_size) { // Cashier admitted the group
-        printf("Customer %d: Group admitted. Eating for %d seconds.\n", customer_pid, eating_time);
-        admitted = 1;
+        printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n", customer_pid, eating_time);
         sleep(eating_time); // Simulate eating time
-        printf("Customer %d: Finished eating.\n", customer_pid);
+        printf("\033[1;35m[Customer %d]\033[0m: Finished eating. Quiting...\n", customer_pid);
+        msg.mtype = 2;
+        msg.table_index = response.table_index;
+        if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
+            perror("Error sending message");
+            return EXIT_FAILURE;
+        }
     } else { // Cashier denied the group
-        printf("Customer %d: Group denied. Quiting...\n", customer_pid);
+        printf("\033[1;35m[Customer %d]\033[0m: Group denied. Quiting...\n", customer_pid);
     }
 
     return 0;
