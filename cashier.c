@@ -41,8 +41,6 @@ int customers_running() {
     int count = atoi(buffer);
     pclose(fp);
 
-    printf("count: %d\n", count);
-
     // Return true if more than one cashier process is running
     return count > 0;
 }
@@ -91,7 +89,7 @@ void handle_message_queue(int duration) {
         perror("Error allocating memory for tables array");
     }
     while (time(NULL) - start_time < duration) {
-        if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 1, IPC_NOWAIT) != -1) {
+	    if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 1, IPC_NOWAIT) != -1) {
             printf("\033[1;32m[Cashier]\033[0m: Received group of %d people (pid=%ld).\n", msg.group_size, msg.pid);
             fflush(stdout); 
 
@@ -126,8 +124,16 @@ void handle_message_queue(int duration) {
         usleep(500000); // Sleep for 0.5 seconds to reduce CPU usage
     }
 
-    if(customers_running()){
-        printf("\033[1;32m[Cashier]\033[0m: Customers still eating, have to stay overtime...\n");
+    while(customers_running() && !other_cashiers_running()){
+        printf("\033[1;32m[Cashier]\033[0m: Customers still eating, staying overrtime and waiting for them to finish... (not letting in new customers)\n");
+        
+        // if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 1, 0) != -1) {
+        //     msg.group_size = 0;
+        //     msg.mtype = msg.pid;
+        //     if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
+        //         perror("Error sending response to customer");
+        //     } 
+        // }
         if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 2, 0) != -1) {
             tables = get_tables_from_shared_memory(&total_tables);
             tables[msg.table_index].group_count -= 1;
@@ -136,19 +142,7 @@ void handle_message_queue(int duration) {
             printf("tables[msg.table_index].group_count = %d, tables[msg.table_index].occupied_capacity = %d\n\n", tables[msg.table_index].group_count, tables[msg.table_index].occupied_capacity);
         }
     }
-    
 }
-
-// Table* getTables(){
-//     int shm_id = shmget(SHM_KEY_2, 0, 0640);
-//     int total_tables = get_totalTab_from_shared_memory(shm_id);
-//     Table *tables = (Table *)malloc(total_tables * sizeof(Table));
-//     if (tables == NULL) {
-//         perror("Error allocating memory for tables array");
-//         return 1;
-//     }
-//     return get_tables_from_shared_memory(total_tables);
-// }
 
 int main(int argc, char *argv[]) {
     int shm_id = shmget(SHM_KEY_1, 0, 0640);
