@@ -27,6 +27,9 @@ typedef struct {
     int occupied_capacity;   // Aktualna liczba zajętych miejsc
     int group_count;         // Liczba grup przy stoliku
 } Table;
+void ignore_sigint(int sig);
+int how_many_cashiers_running();
+int customers_running();
 int connect_to_mess_queue();
 int allocate_totalTab_shared_memory();
 void write_totalTab_to_shared_memory(int shmid, int value);

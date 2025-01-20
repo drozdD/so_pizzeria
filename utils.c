@@ -6,6 +6,42 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 
+// Ignore ctrl+c
+void ignore_sigint(int sig) {}
+
+// Function to check if other cashier processes are running
+int how_many_cashiers_running() {
+    char buffer[256];
+    FILE *fp = popen("ps -ef | grep './cashier' | grep -v grep | wc -l", "r");
+    if (fp == NULL) {
+        perror("Error checking other cashier processes");
+        return 1;
+    }
+
+    fgets(buffer, sizeof(buffer), fp);
+    int count = atoi(buffer);
+    pclose(fp);
+
+    // Return true if more than one cashier process is running
+    return count;
+}
+
+int customers_running() {
+    char buffer[256];
+    FILE *fp = popen("ps -ef | grep './customer' | grep -v grep |  wc -l", "r");
+    if (fp == NULL) {
+        perror("Error checking other cashier processes");
+        return 1;
+    }
+
+    fgets(buffer, sizeof(buffer), fp);
+    int count = atoi(buffer);
+    pclose(fp);
+
+    // Return true if more than one cashier process is running
+    return count > 0;
+}
+
 int connect_to_mess_queue() {
     key_t key;
     key = ftok("main.c", 1);
