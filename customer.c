@@ -7,7 +7,7 @@
 
 // Handler for SIGUSR1 from Firefighter
 void handle_sigusr1(int sig) {
-    printf("\n\033[1;43m[Customer]\033[0m: FIRE!!! Received signal from Firefighter. Exiting...\n\n");
+    printf("\033[1;43m[Customer %d]\033[0m: FIRE!!! Received signal from Firefighter. Exiting...\n", getpid());
     exit(0);
 }
 
@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
 
     // Wait for a response from the cashier
     if (msgrcv(msg_id, &response, sizeof(msg) - sizeof(msg.mtype), customer_pid, 0) == -1) {
-        perror("Error receiving response");
         return EXIT_FAILURE;
     }
 
@@ -74,7 +73,6 @@ int main(int argc, char *argv[]) {
         printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n", customer_pid, eating_time);
         sleep(eating_time); // Simulate eating time
         printf("\033[1;35m[Customer %d]\033[0m: Finished eating. Quitting...\n", customer_pid);
-
         msg.mtype = 2;
         msg.table_index = response.table_index;
         if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {

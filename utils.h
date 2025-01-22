@@ -28,6 +28,7 @@ typedef struct {
     int group_count;         // Liczba grup przy stoliku
 } Table;
 void ignore_sigint(int sig);
+void reap_children();
 int how_many_cashiers_running();
 int customers_running();
 int connect_to_mess_queue();

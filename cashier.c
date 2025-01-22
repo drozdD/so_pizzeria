@@ -43,7 +43,7 @@ int assign_group(Table *tables, int table_count, int group_size, int *index) {
 }
 
 // Function to handle the message queue and manage table assignments
-void handle_message_queue(int duration) {
+void handle_customers_message_queue(int duration) {
     MessageAsk msg;
 
     // Create or connect to the message queue
@@ -266,7 +266,8 @@ int main(int argc, char *argv[]) {
     printf("\033[1;32m[Cashier]\033[0m: Cashier running for %d seconds...\n", duration);
 
     // Run the cashier process for the specified duration
-    handle_message_queue(duration);
+    handle_customers_message_queue(duration);
+    
     // Run the leaving work process due to firefighter signal or end of work
     int emergencyFlag = 0;
     leave_work(emergencyFlag);

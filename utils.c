@@ -1,18 +1,27 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <sys/shm.h>
 #include <sys/msg.h>
+#include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
 
 // Ignore ctrl+c
 void ignore_sigint(int sig) {}
 
+// Kill all zaombies processes
+void reap_children(int sec) {
+    sleep(sec);
+    pid_t pid;
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {}
+}
+
 // Function to check if other cashier processes are running
 int how_many_cashiers_running() {
     char buffer[256];
-    FILE *fp = popen("ps -ef | grep './cashier' | grep -v grep | wc -l", "r");
+    FILE *fp = popen("ps -ef | grep 'cashier' | grep -v grep | wc -l", "r");
     if (fp == NULL) {
         perror("Error checking other cashier processes");
         return 1;
@@ -28,7 +37,7 @@ int how_many_cashiers_running() {
 
 int customers_running() {
     char buffer[256];
-    FILE *fp = popen("ps -ef | grep './customer' | grep -v grep |  wc -l", "r");
+    FILE *fp = popen("ps -ef | grep 'customer' | grep -v grep |  wc -l", "r");
     if (fp == NULL) {
         perror("Error checking other cashier processes");
         return 1;

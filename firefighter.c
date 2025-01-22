@@ -38,13 +38,14 @@ int find_process_pids(const char *process_name, pid_t *pids, size_t max_pids) {
 void handle_sigint(int sig) {
     pid_t customer_pids[MAX_PIDS];
     pid_t cashier_pids[MAX_PIDS];
+    pid_t main_pids[MAX_PIDS];
 
     // Find PIDs of all "customer" and "cashier" processes
     int customer_count = find_process_pids("customer", customer_pids, MAX_PIDS);
     int cashier_count = find_process_pids("cashier", cashier_pids, MAX_PIDS);
+    int main_count = find_process_pids("main", main_pids, MAX_PIDS);
 
     printf("\033[1;43m[Firefighter]\033[0m: FIRE!!! Sending signals to %d Customer(s) and %d Cashier(s)...\n", customer_count, cashier_count);
-
     // Send signals to all "customer" processes
     for (int i = 0; i < customer_count; i++) {
         if (kill(customer_pids[i], SIGUSR1) == -1) {
@@ -60,6 +61,16 @@ void handle_sigint(int sig) {
             perror("Error sending signal to Cashier");
         } else {
             printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Cashier (PID: %d).\n", cashier_pids[i]);
+        }
+    }
+
+    usleep(500000);
+    // Send signals to all "main" processes
+    for (int i = 0; i < main_count; i++) {
+        if (kill(main_pids[0], SIGUSR2) == -1) {
+            perror("Error sending signal to Cashier");
+        } else {
+            printf("\033[1;43m[Firefighter]\033[0m: Signal sent to main process (PID: %d).\n", main_pids[0]);
         }
     }
 
