@@ -174,8 +174,8 @@ int leave_work(int emergencyFlag){
     return 0;
 }
 
-// Function to handle SIGUSR2 signal
-void handle_sigusr2(int sig) {
+// Function to handle SIGUSR1 signal
+void handle_SIGUSR1(int sig) {
     printf("\n\033[1;43m[Cashier %d]\033[0m: FIRE!!! Received signal from Firefighter. Cleaning up and exiting...\n", getpid());
     int emergencyFlag = 1;
     leave_work(emergencyFlag);
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
     // Tgnore Ctrl+C
     signal(SIGINT, ignore_sigint);
     // Handle firefighter signal
-    signal(SIGUSR2, handle_sigusr2);
+    signal(SIGUSR1, handle_SIGUSR1);
 
     int shm_id = shmget(SHM_KEY_1, 0, 0640);
     int duration;

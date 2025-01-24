@@ -64,7 +64,7 @@ void handle_sigint(int sig) {
 
     // Send signals to all "cashier" processes
     for (int i = 0; i < cashier_count; i++) {
-        kill(cashier_pids[i], SIGUSR2);
+        kill(cashier_pids[i], SIGUSR1);
         printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Cashier (PID: %d).\n", cashier_pids[i]);
     }
 
@@ -72,7 +72,7 @@ void handle_sigint(int sig) {
 
     // Send signals to all "main" processes
     for (int i = 0; i < main_count; i++) {
-        kill(main_pids[0], SIGUSR2);
+        kill(main_pids[0], SIGUSR1);
         printf("\033[1;43m[Firefighter]\033[0m: Signal sent to main process (PID: %d).\n", main_pids[0]);
     }
 
