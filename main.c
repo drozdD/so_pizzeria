@@ -16,8 +16,6 @@
 #define BASE_MAX_CUSTOMER_ARRIVAL_TIME 600    // Maximum time between customer groups (10 minutes)
 #define BASE_MIN_EATING_TIME 900             // Minimum eating time (15 minutes)
 #define BASE_MAX_EATING_TIME 3600            // Maximum eating time (1 hour)
-// #define BASE_SECOND_CASHIER_START 7200      // Second cashier starts after 2 hours
-// #define BASE_FIRST_CASHIER_END 21600        // First cashier leaves after 6 hours
 
 // Time multiplier (will be set from command line)
 double TIME_MULTIPLIER = 1.0;

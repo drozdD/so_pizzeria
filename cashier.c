@@ -95,10 +95,12 @@ void handle_customers_message_queue(int duration) {
 
         // Handle messages for groups leaving the table
         if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 2, IPC_NOWAIT) != -1) {
+            semaphore_wait(sem_id, 0);
             tables = get_tables_from_shared_memory(&total_tables);
             tables[msg.table_index].group_count -= 1;
             tables[msg.table_index].occupied_capacity -= msg.group_size;
             write_tables_to_shared_memory(tables, total_tables);
+            semaphore_signal(sem_id, 0);
         }
     }
 
