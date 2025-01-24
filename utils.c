@@ -12,8 +12,7 @@
 void ignore_sigint(int sig) {}
 
 // Kill all zaombies processes
-void reap_children(int sec) {
-    sleep(sec);
+void reap_children() {
     pid_t pid;
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {}
 }
@@ -28,11 +27,22 @@ int how_many_cashiers_running() {
     }
 
     fgets(buffer, sizeof(buffer), fp);
-    int count = atoi(buffer);
+    int countAllCashiers = atoi(buffer);
     pclose(fp);
 
+    char buffer2[256];
+    FILE *fpr = popen("ps -ef | grep -F '[cashier] <defunct>' | grep -v grep | wc -l", "r");
+    if (fpr == NULL) {
+        perror("Error checking other cashier processes");
+        return 1;
+    }
+
+    fgets(buffer2, sizeof(buffer2), fpr);
+    int countFakeCashiers = atoi(buffer2);
+    pclose(fpr);
+
     // Return true if more than one cashier process is running
-    return count;
+    return countAllCashiers - countFakeCashiers;
 }
 
 int customers_running() {
@@ -47,7 +57,7 @@ int customers_running() {
     int count = atoi(buffer);
     pclose(fp);
 
-    // Return true if more than one cashier process is running
+    // Return true if more than one customer process is running
     return count > 0;
 }
 

@@ -33,11 +33,11 @@ int assign_group(Table *tables, int table_count, int group_size, int *index) {
     if (best_table) {
         best_table->occupied_capacity += group_size;
         best_table->group_count++;
-        printf("\033[1;32m[Cashier]\033[0m: Group of %d has been assigned to a table with a capacity of %d.\n", group_size, best_table->max_capacity);
+        printf("\033[1;32m[Cashier %d]\033[0m: Group of %d has been assigned to a table with a capacity of %d.\n",getpid(),group_size, best_table->max_capacity);
         return 1;
     } else {
         // If no suitable table is available
-        printf("\033[1;32m[Cashier]\033[0m: Sorry, cannot accept a group of %d.\n", group_size);
+        printf("\033[1;32m[Cashier %d]\033[0m: Sorry, cannot accept a group of %d.\n", getpid(), group_size);
         return 0;
     }
 }
@@ -48,7 +48,7 @@ void handle_customers_message_queue(int duration) {
 
     // Create or connect to the message queue
     int msg_id = connect_to_mess_queue();
-    printf("\033[1;32m[Cashier]\033[0m: Waiting for customers with msg_id = %d...\n\n", msg_id);
+    printf("\033[1;32m[Cashier %d]\033[0m: Waiting for customers with msg_id = %d...\n\n", getpid(), msg_id);
     time_t start_time = time(NULL);
     
     // Get the total number of tables from shared memory
@@ -63,7 +63,7 @@ void handle_customers_message_queue(int duration) {
     while (time(NULL) - start_time < duration) {
         // Handle customer arrival messages
         if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 1, IPC_NOWAIT) != -1) {
-            printf("\033[1;32m[Cashier]\033[0m: Received a group of %d people (pid=%ld).\n", msg.group_size, msg.pid);
+            printf("\033[1;32m[Cashier %d]\033[0m: Received a group of %d people (pid=%ld).\n", getpid(), msg.group_size, msg.pid);
             fflush(stdout);
 
             // Get tables data from shared memory and assign the group
@@ -91,14 +91,14 @@ void handle_customers_message_queue(int duration) {
             write_tables_to_shared_memory(tables, total_tables);
         }
 
-        usleep(500000); // Sleep for 0.5 seconds to reduce CPU usage
+        //usleep(500000); // Sleep for 0.5 seconds to reduce CPU usage
     }
 
     // Handle overtime situations if there are customers still eating
     int first_iteration = 1;
     while (customers_running() && how_many_cashiers_running() - 1 == 0) {
         if (first_iteration) {
-            printf("\033[1;32m[Cashier]\033[0m: Customers are still eating, staying overtime and waiting for them to finish... (not letting in new customers)\n");
+            printf("\033[1;32m[Cashier %d]\033[0m: Customers are still eating, staying overtime and waiting for them to finish... (not letting in new customers)\n", getpid());
             first_iteration -= 1;
         }
 
@@ -112,14 +112,14 @@ void handle_customers_message_queue(int duration) {
         }
 
         // Handle messages for groups leaving the table
-        if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 2, IPC_NOWAIT) != -1) {
+        if (msgrcv(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 2, 0) != -1) {
             tables = get_tables_from_shared_memory(&total_tables);
             tables[msg.table_index].group_count -= 1;
             tables[msg.table_index].occupied_capacity -= msg.group_size;
             write_tables_to_shared_memory(tables, total_tables);
         }
 
-        usleep(500000); // Sleep for 0.5 seconds
+        //usleep(500000); // Sleep for 0.5 seconds
     }
 }
 
@@ -127,7 +127,7 @@ void handle_customers_message_queue(int duration) {
 int leave_work(int emergencyFlag){
      // Check if other cashier processes are running
     if (how_many_cashiers_running() - 1 == 0 || emergencyFlag) {
-        printf("\n\033[1;32m[Cashier]\033[0m: Closing pizzeria...\n");
+        printf("\n\033[1;32m[Cashier %d]\033[0m: Closing pizzeria...\n", getpid());
         //clean up
         int msg_id = connect_to_mess_queue();
         struct msqid_ds msq_status;
@@ -137,7 +137,7 @@ int leave_work(int emergencyFlag){
             if (msgctl(msg_id, IPC_RMID, NULL) == -1) {
                 perror("Error removing message queue");
             } else {
-                printf("\n\033[1;32m[Cashier]\033[0m: Message queue cleaned up.\n");
+                printf("\n\033[1;32m[Cashier %d]\033[0m: Message queue cleaned up.\n", getpid());
             }
         }
 
@@ -152,17 +152,17 @@ int leave_work(int emergencyFlag){
             perror("Error removing shared memory segment");
             return 1;
         }
-        printf("\033[1;32m[Cashier]\033[0m: Shared memory successfully cleaned up. Pizzeria is now closed.\n");
+        printf("\033[1;32m[Cashier %d]\033[0m: Shared memory successfully cleaned up. Pizzeria is now closed.\n", getpid());
         
     } else {
-        printf("\033[1;32m[Cashier]\033[0m: Other cashier processes are still running, I'm leaving work.\n");
+        printf("\033[1;32m[Cashier %d]\033[0m: Other cashier processes are still running, I'm leaving work.\n", getpid());
     }
     return 0;
 }
 
 // Function to handle SIGUSR2 signal
 void handle_sigusr2(int sig) {
-    printf("\n\033[1;43m[Cashier]\033[0m: FIRE!!! Received signal from Firefighter. Cleaning up and exiting...\n");
+    printf("\n\033[1;43m[Cashier %d]\033[0m: FIRE!!! Received signal from Firefighter. Cleaning up and exiting...\n", getpid());
     int emergencyFlag = 1;
     leave_work(emergencyFlag);
     exit(0);
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
         } else {
             // Shared memory exists, and no arguments were provided
 	    duration = (argc == 2) ? atoi(argv[1]) : 20;		
-            printf("\033[1;32m[Cashier]\033[0m: Tables are already set up. No changes made.\n");
+            printf("\033[1;32m[Cashier %d]\033[0m: Tables are already set up. No changes made.\n", getpid());
         }
     } else {
         // Shared memory does not exist
@@ -258,12 +258,12 @@ int main(int argc, char *argv[]) {
             free(tables);
             return 1;
         }
-        printf("\033[1;32m[Cashier]\033[0m: Tables successfully initialized in shared memory.\n");
+        printf("\033[1;32m[Cashier %d]\033[0m: Tables successfully initialized in shared memory.\n", getpid());
 
         // Free the dynamically allocated memory
         free(tables);
     }
-    printf("\033[1;32m[Cashier]\033[0m: Cashier running for %d seconds...\n", duration);
+    printf("\033[1;32m[Cashier %d]\033[0m: Cashier running for %d seconds...\n", getpid(), duration);
 
     // Run the cashier process for the specified duration
     handle_customers_message_queue(duration);

@@ -53,14 +53,13 @@ int main(int argc, char *argv[]) {
     msg.group_size = group_size;
     msg.table_index = -1;
 
+
     // Send the request to the cashier
+    printf("\033[1;35m[Customer %d]\033[0m: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
     if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
         perror("Error sending message");
         return EXIT_FAILURE;
     }
-    printf("\033[1;35m[Customer %d]\033[0m: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
-
-    usleep(500001); // Small delay to avoid message collision
 
     MessageAsk response;
 
@@ -72,14 +71,13 @@ int main(int argc, char *argv[]) {
     if (response.group_size) { // Group admitted
         printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n", customer_pid, eating_time);
         sleep(eating_time); // Simulate eating time
-        printf("\033[1;35m[Customer %d]\033[0m: Finished eating. Quitting...\n", customer_pid);
+        printf("\033[1;35m[Customer %d]\033[0m: Group of %d finished eating. Quitting...\n", customer_pid, group_size);
         msg.mtype = 2;
         msg.table_index = response.table_index;
         if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
             perror("Error sending message");
             return EXIT_FAILURE;
         }
-        usleep(500001); // Delay to ensure proper communication
     } else { // Group denied
         printf("\033[1;35m[Customer %d]\033[0m: Group denied. Quitting...\n", customer_pid);
     }

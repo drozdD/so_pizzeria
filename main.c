@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
     pid_t firefighter_pid = start_firefighter();
     
     // Start first cashier
-    pid_t cashier1_pid = start_cashier(config, SIMULATION_DURATION);
+    pid_t cashier1_pid = start_cashier(config, FIRST_CASHIER_END);
     
     // Simulation main loop
     time_t start_time = time(NULL);
@@ -200,7 +200,6 @@ int main(int argc, char *argv[]) {
         
         // End first cashier after FIRST_CASHIER_END seconds
         if (!first_cashier_ended && (time(NULL) - start_time >= FIRST_CASHIER_END)) {
-            kill(cashier1_pid, SIGTERM);
             printf("First cashier ended shift\n");
             first_cashier_ended = 1;
         }
@@ -208,24 +207,14 @@ int main(int argc, char *argv[]) {
         spawn_customer_group();
         // Wait random time before next customer group
         sleep(random_range(MIN_CUSTOMER_ARRIVAL_TIME, MAX_CUSTOMER_ARRIVAL_TIME));
-        reap_children();
+        //reap_children();
     }
     
 
-    while (customers_running())
+    while (customers_running() || how_many_cashiers_running() > 0)
     {
-        sleep(1);
+        reap_children();
     }
-    
-    
-    // Cleanup
-    if (cashier1_pid > 0 && !first_cashier_ended) {
-        kill(cashier1_pid, SIGTERM);
-    }
-    if (cashier2_pid > 0) {
-        kill(cashier2_pid, SIGTERM);
-    }
-    
 
     printf("Simulation completed\n");
     return 0;

@@ -64,7 +64,7 @@ void handle_sigint(int sig) {
         }
     }
 
-    usleep(500000);
+    //usleep(500000);
     // Send signals to all "main" processes
     for (int i = 0; i < main_count; i++) {
         if (kill(main_pids[0], SIGUSR2) == -1) {
