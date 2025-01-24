@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         spawn_customer_group();
         // Wait random time before next customer group
         sleep(random_range(MIN_CUSTOMER_ARRIVAL_TIME, MAX_CUSTOMER_ARRIVAL_TIME));
-        //reap_children();
+        reap_children();
     }
     
 

@@ -5,9 +5,12 @@
 #include <time.h>
 #include "utils.h"
 
+volatile sig_atomic_t fireFlag = 0;
+
 // Handler for SIGUSR1 from Firefighter
 void handle_sigusr1(int sig) {
     printf("\033[1;43m[Customer %d]\033[0m: FIRE!!! Received signal from Firefighter. Exiting...\n", getpid());
+    fireFlag = 1;
     exit(0);
 }
 
@@ -70,7 +73,11 @@ int main(int argc, char *argv[]) {
 
     if (response.group_size) { // Group admitted
         printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n", customer_pid, eating_time);
-        sleep(eating_time); // Simulate eating time
+        for (int i = 0; i < eating_time; i++) {
+            sleep(1);
+            if (fireFlag) {exit(0);}
+        }
+
         printf("\033[1;35m[Customer %d]\033[0m: Group of %d finished eating. Quitting...\n", customer_pid, group_size);
         msg.mtype = 2;
         msg.table_index = response.table_index;

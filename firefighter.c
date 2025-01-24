@@ -48,30 +48,20 @@ void handle_sigint(int sig) {
     printf("\033[1;43m[Firefighter]\033[0m: FIRE!!! Sending signals to %d Customer(s) and %d Cashier(s)...\n", customer_count, cashier_count);
     // Send signals to all "customer" processes
     for (int i = 0; i < customer_count; i++) {
-        if (kill(customer_pids[i], SIGUSR1) == -1) {
-            perror("Error sending signal to Customer");
-        } else {
-            printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Customer (PID: %d).\n", customer_pids[i]);
-        }
+        kill(customer_pids[i], SIGUSR1);
+        printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Customer (PID: %d).\n", customer_pids[i]);
     }
 
     // Send signals to all "cashier" processes
     for (int i = 0; i < cashier_count; i++) {
-        if (kill(cashier_pids[i], SIGUSR2) == -1) {
-            perror("Error sending signal to Cashier");
-        } else {
-            printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Cashier (PID: %d).\n", cashier_pids[i]);
-        }
+        kill(cashier_pids[i], SIGUSR2);
+        printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Cashier (PID: %d).\n", cashier_pids[i]);
     }
 
-    //usleep(500000);
     // Send signals to all "main" processes
     for (int i = 0; i < main_count; i++) {
-        if (kill(main_pids[0], SIGUSR2) == -1) {
-            perror("Error sending signal to Cashier");
-        } else {
-            printf("\033[1;43m[Firefighter]\033[0m: Signal sent to main process (PID: %d).\n", main_pids[0]);
-        }
+        kill(main_pids[0], SIGUSR2);
+        printf("\033[1;43m[Firefighter]\033[0m: Signal sent to main process (PID: %d).\n", main_pids[0]);
     }
 
     printf("\033[1;43m[Firefighter]\033[0m: Exiting...\n");
