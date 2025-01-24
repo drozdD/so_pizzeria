@@ -43,9 +43,19 @@ void handle_sigint(int sig) {
     // Find PIDs of all "customer" and "cashier" processes
     int customer_count = find_process_pids("customer", customer_pids, MAX_PIDS);
     int cashier_count = find_process_pids("cashier", cashier_pids, MAX_PIDS);
+    cashier_count = how_many_cashiers_running();
     int main_count = find_process_pids("main", main_pids, MAX_PIDS);
 
-    printf("\033[1;43m[Firefighter]\033[0m: FIRE!!! Sending signals to %d Customer(s) and %d Cashier(s)...\n", customer_count, cashier_count);
+    // access semaphore set 
+    int sem_id = semget(SEM_KEY, 3, 0640);
+    if (sem_id == -1) {
+        perror("Failed to access semaphore set");
+        exit(EXIT_FAILURE);
+    }
+
+    semaphore_wait(sem_id, 1);
+
+    printf("\033[1;43m[Firefighter]\033[0m: FIRE!!! Sending signals to Customer(s) and Cashier(s)...\n");
     // Send signals to all "customer" processes
     for (int i = 0; i < customer_count; i++) {
         kill(customer_pids[i], SIGUSR1);
@@ -58,11 +68,15 @@ void handle_sigint(int sig) {
         printf("\033[1;43m[Firefighter]\033[0m: Signal sent to Cashier (PID: %d).\n", cashier_pids[i]);
     }
 
+    semaphore_wait(sem_id, 2);
+
     // Send signals to all "main" processes
     for (int i = 0; i < main_count; i++) {
         kill(main_pids[0], SIGUSR2);
         printf("\033[1;43m[Firefighter]\033[0m: Signal sent to main process (PID: %d).\n", main_pids[0]);
     }
+
+    remove_semaphore(sem_id);
 
     printf("\033[1;43m[Firefighter]\033[0m: Exiting...\n");
     exit(0);

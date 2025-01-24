@@ -58,6 +58,12 @@ void handle_customers_message_queue(int duration) {
     if (tables == NULL) {
         perror("Error allocating memory for the tables array");
     }
+
+    int sem_id = semget(SEM_KEY, 3, 0640);
+    if (sem_id == -1) {
+        perror("Failed to access semaphore set");
+        exit(EXIT_FAILURE);
+    }
     
     // Process messages within the specified duration
     while (time(NULL) - start_time < duration) {
@@ -66,11 +72,15 @@ void handle_customers_message_queue(int duration) {
             printf("\033[1;32m[Cashier %d]\033[0m: Received a group of %d people (pid=%ld).\n", getpid(), msg.group_size, msg.pid);
             fflush(stdout);
 
+            semaphore_wait(sem_id, 0);
+
             // Get tables data from shared memory and assign the group
             tables = get_tables_from_shared_memory(&total_tables);
             int index_of_table = -1;
             bool allow_entry = assign_group(tables, total_tables, msg.group_size, &index_of_table);
             write_tables_to_shared_memory(tables, total_tables);
+
+            semaphore_signal(sem_id, 0);
 
             // Send a response back to the customer
             msg.group_size = allow_entry ? 1 : 0; // 1 = allowed, 0 = denied
@@ -90,8 +100,6 @@ void handle_customers_message_queue(int duration) {
             tables[msg.table_index].occupied_capacity -= msg.group_size;
             write_tables_to_shared_memory(tables, total_tables);
         }
-
-        //usleep(500000); // Sleep for 0.5 seconds to reduce CPU usage
     }
 
     // Handle overtime situations if there are customers still eating
@@ -118,8 +126,6 @@ void handle_customers_message_queue(int duration) {
             tables[msg.table_index].occupied_capacity -= msg.group_size;
             write_tables_to_shared_memory(tables, total_tables);
         }
-
-        //usleep(500000); // Sleep for 0.5 seconds
     }
 }
 
@@ -152,8 +158,16 @@ int leave_work(int emergencyFlag){
             perror("Error removing shared memory segment");
             return 1;
         }
-        printf("\033[1;32m[Cashier %d]\033[0m: Shared memory successfully cleaned up. Pizzeria is now closed.\n", getpid());
-        
+
+        int sem_id = semget(SEM_KEY, 3, 0640);
+        if (sem_id == -1) {
+            perror("Failed to access semaphore set");
+            exit(EXIT_FAILURE);
+        }
+ 
+        semaphore_signal(sem_id, 2);
+
+        printf("\033[1;32m[Cashier %d]\033[0m: Shared memory set successfully cleaned up. Pizzeria is now closed.\n", getpid());
     } else {
         printf("\033[1;32m[Cashier %d]\033[0m: Other cashier processes are still running, I'm leaving work.\n", getpid());
     }
@@ -262,6 +276,28 @@ int main(int argc, char *argv[]) {
 
         // Free the dynamically allocated memory
         free(tables);
+
+        // Create a semaphore set with 3 semaphore
+        int sem_id = semget(SEM_KEY, 3, 0640 | IPC_CREAT);
+        if (sem_id == -1) {
+            perror("Failed to create semaphore set");
+            exit(EXIT_FAILURE);
+        }
+
+        // Initialize the shared memory access semaphore to 1
+        if (initialize_semaphore(sem_id, 0, 1) == -1) {
+            exit(EXIT_FAILURE);
+        }
+
+         // Initialize the openForNewCustomersFlag semaphore to 1
+        if (initialize_semaphore(sem_id, 1, 1) == -1) {
+            exit(EXIT_FAILURE);
+        }
+
+        // Initialize the pizzeriaSucsesfullyClosedFlag semaphore to 0 in case of fire
+        if (initialize_semaphore(sem_id, 2, 0) == -1) {
+            exit(EXIT_FAILURE);
+        }
     }
     printf("\033[1;32m[Cashier %d]\033[0m: Cashier running for %d seconds...\n", getpid(), duration);
 

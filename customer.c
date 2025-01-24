@@ -56,12 +56,22 @@ int main(int argc, char *argv[]) {
     msg.group_size = group_size;
     msg.table_index = -1;
 
+    int sem_id = semget(SEM_KEY, 3, 0640);
+    if (sem_id == -1) {
+        perror("Failed to access semaphore set");
+        exit(EXIT_FAILURE);
+    }
+    int isPizzeriaOpen = get_semaphore_value(sem_id, 1);
 
-    // Send the request to the cashier
-    printf("\033[1;35m[Customer %d]\033[0m: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
-    if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
-        perror("Error sending message");
-        return EXIT_FAILURE;
+    if(isPizzeriaOpen){
+        // Send the request to the cashier
+        printf("\033[1;35m[Customer %d]\033[0m: Sent request for group size %d. Msg_id: %d\n", customer_pid, group_size, msg_id);
+        if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
+            perror("Error sending message");
+            return EXIT_FAILURE;
+        }
+    }else{
+        exit(0);
     }
 
     MessageAsk response;
@@ -72,13 +82,15 @@ int main(int argc, char *argv[]) {
     }
 
     if (response.group_size) { // Group admitted
-        printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n", customer_pid, eating_time);
-        for (int i = 0; i < eating_time; i++) {
-            sleep(1);
-            if (fireFlag) {exit(0);}
+        printf("\033[1;35m[Customer %d]\033[0m: GROUP ADMITTED! Eating for %d seconds.\n\n", customer_pid, eating_time);
+
+        for (int i = 0; i < eating_time * 10; i++) {
+            isPizzeriaOpen = get_semaphore_value(sem_id, 1);
+            if (isPizzeriaOpen == 0 || isPizzeriaOpen == -1) {exit(0);}
+            usleep(100000);
         }
 
-        printf("\033[1;35m[Customer %d]\033[0m: Group of %d finished eating. Quitting...\n", customer_pid, group_size);
+        printf("\033[1;35m[Customer %d]\033[0m: Group of %d finished eating. Quitting...\n\n", customer_pid, group_size);
         msg.mtype = 2;
         msg.table_index = response.table_index;
         if (msgsnd(msg_id, &msg, sizeof(msg) - sizeof(msg.mtype), 0) == -1) {
@@ -86,7 +98,7 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     } else { // Group denied
-        printf("\033[1;35m[Customer %d]\033[0m: Group denied. Quitting...\n", customer_pid);
+        printf("\033[1;35m[Customer %d]\033[0m: Group denied. Quitting...\n\n", customer_pid);
     }
 
     return 0;

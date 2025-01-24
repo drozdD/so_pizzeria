@@ -16,8 +16,8 @@
 #define BASE_MAX_CUSTOMER_ARRIVAL_TIME 600    // Maximum time between customer groups (10 minutes)
 #define BASE_MIN_EATING_TIME 900             // Minimum eating time (15 minutes)
 #define BASE_MAX_EATING_TIME 3600            // Maximum eating time (1 hour)
-#define BASE_SECOND_CASHIER_START 7200      // Second cashier starts after 2 hours
-#define BASE_FIRST_CASHIER_END 21600        // First cashier leaves after 6 hours
+// #define BASE_SECOND_CASHIER_START 7200      // Second cashier starts after 2 hours
+// #define BASE_FIRST_CASHIER_END 21600        // First cashier leaves after 6 hours
 
 // Time multiplier (will be set from command line)
 double TIME_MULTIPLIER = 1.0;
@@ -51,8 +51,8 @@ void initialize_time_variables() {
     MAX_CUSTOMER_ARRIVAL_TIME = scale_time(BASE_MAX_CUSTOMER_ARRIVAL_TIME);
     MIN_EATING_TIME = scale_time(BASE_MIN_EATING_TIME);
     MAX_EATING_TIME = scale_time(BASE_MAX_EATING_TIME);
-    SECOND_CASHIER_START = scale_time(BASE_SECOND_CASHIER_START);
-    FIRST_CASHIER_END = scale_time(BASE_FIRST_CASHIER_END);
+    SECOND_CASHIER_START = SIMULATION_DURATION * 0.25;
+    FIRST_CASHIER_END = SIMULATION_DURATION * 0.75;
 }
 
 // Function to generate random number in range
@@ -119,7 +119,7 @@ pid_t start_firefighter() {
     pid_t pid = fork();
     if (pid == 0) {
         // Child process (firefighter)
-        pid_t pid = execl("./firefighter", "firefighter", NULL);
+        execl("./firefighter", "firefighter", NULL);
         exit(1);
     }
     return pid;
@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
     // Set time multiplier and initialize time variables
     if(argc == 2){TIME_MULTIPLIER = atof(argv[1]);}
     if(argc == 6){TIME_MULTIPLIER = atof(argv[5]);}
-    if (TIME_MULTIPLIER <= 0) {
-        printf("Time multiplier must be positive\n");
+    if (TIME_MULTIPLIER <= 0 || TIME_MULTIPLIER > 300) {
+        printf("Time multiplier must be int between [1 ; 300]\n");
         return 1;
     }
     initialize_time_variables();
@@ -178,14 +178,13 @@ int main(int argc, char *argv[]) {
     }
     
     // Start firefighter process
-    pid_t firefighter_pid = start_firefighter();
+    int firefighter_pid = start_firefighter();
     
     // Start first cashier
-    pid_t cashier1_pid = start_cashier(config, FIRST_CASHIER_END);
+    start_cashier(config, FIRST_CASHIER_END);
     
     // Simulation main loop
     time_t start_time = time(NULL);
-    pid_t cashier2_pid = -1;
     int second_cashier_started = 0;
     int first_cashier_ended = 0;
 
@@ -193,14 +192,14 @@ int main(int argc, char *argv[]) {
         // Start second cashier after SECOND_CASHIER_START seconds
         if (!second_cashier_started && (time(NULL) - start_time >= SECOND_CASHIER_START)) {
             TableConfig empty_config = {-1, -1, -1, -1}; // Tables already set up
-            cashier2_pid = start_cashier(empty_config, SIMULATION_DURATION - SECOND_CASHIER_START);
-            printf("Second cashier started\n");
+            start_cashier(empty_config, SIMULATION_DURATION - SECOND_CASHIER_START);
+            printf("\033[1;32m[Cashier]\033[0m: Second cashier started\n");
             second_cashier_started = 1;
         }
         
         // End first cashier after FIRST_CASHIER_END seconds
         if (!first_cashier_ended && (time(NULL) - start_time >= FIRST_CASHIER_END)) {
-            printf("First cashier ended shift\n");
+            printf("\033[1;32m[Cashier]\033[0m: First cashier ended shift\n");
             first_cashier_ended = 1;
         }
         // Spawn new customer groups
@@ -215,6 +214,18 @@ int main(int argc, char *argv[]) {
     {
         reap_children();
     }
+
+    // Send SIGTERM to gracefully terminate the process
+    if (kill(firefighter_pid, SIGTERM) == -1) {
+        perror("Failed to send SIGTERM to firefighter process");
+        exit(EXIT_FAILURE);
+    }
+    int sem_id = semget(SEM_KEY, 3, 0640);
+    if (sem_id == -1) {
+        perror("Failed to access semaphore set");
+        exit(EXIT_FAILURE);
+    }
+    remove_semaphore(sem_id);
 
     printf("Simulation completed\n");
     return 0;

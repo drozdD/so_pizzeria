@@ -57,8 +57,73 @@ int customers_running() {
     int count = atoi(buffer);
     pclose(fp);
 
-    // Return true if more than one customer process is running
-    return count > 0;
+    // Return true if more than zero customer process is running
+    return count - 1 > 0;
+}
+
+// ============= SEMAPHORES ==================
+// nr 0 - shared memory access
+// nr 1 - openForNewCustomersFlag
+// nr 2 - pizzeriaSucsesfullyClosedFlag in case of fire
+
+// Function to initialize a semaphore
+int initialize_semaphore(int sem_id, int sem_num, int initial_value) {
+    union semun {
+        int val;                // Value for SETVAL
+        struct semid_ds *buf;   // Buffer for IPC_STAT, IPC_SET
+        unsigned short *array;  // Array for GETALL, SETALL
+    } sem_union;
+    sem_union.val = initial_value;
+
+    if (semctl(sem_id, sem_num, SETVAL, sem_union) == -1) {
+        perror("Failed to initialize semaphore");
+        return -1;
+    }
+    return 0;
+}
+
+// Function to perform a P (decrement) operation
+int semaphore_wait(int sem_id, int sem_num) {
+    struct sembuf sem_op;
+    sem_op.sem_num = sem_num; // Semaphore number
+    sem_op.sem_op = -1;       // Decrement by 1
+    sem_op.sem_flg = 0;       // Blocking operation
+
+    if (semop(sem_id, &sem_op, 1) == -1) {
+        perror("Semaphore wait (P) operation failed");
+        return -1;
+    }
+    return 0;
+}
+
+// Function to perform a V (increment) operation
+int semaphore_signal(int sem_id, int sem_num) {
+    struct sembuf sem_op;
+    sem_op.sem_num = sem_num; // Semaphore number
+    sem_op.sem_op = 1;        // Increment by 1
+    sem_op.sem_flg = 0;       // Blocking operation
+
+    if (semop(sem_id, &sem_op, 1) == -1) {
+        perror("Semaphore signal (V) operation failed");
+        return -1;
+    }
+    return 0;
+}
+
+// Function to get the current value of a semaphore
+int get_semaphore_value(int sem_id, int sem_num) {
+    int value = semctl(sem_id, sem_num, GETVAL);
+    if (value == -1) {
+        return -1;
+    }
+    return value;
+}
+
+// Function to remove a semaphore set
+void remove_semaphore(int sem_id) {
+    if (semctl(sem_id, 0, IPC_RMID) == -1) {
+        perror("Failed to remove semaphore");
+    }
 }
 
 int connect_to_mess_queue() {

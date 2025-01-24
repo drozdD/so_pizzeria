@@ -11,9 +11,9 @@
 #include <errno.h>
 #include <string.h>
 
-#define SEM_KEY 1234
-#define SHM_KEY_1 5678
-#define SHM_KEY_2 2137
+#define SEM_KEY 2222 // semaphores
+#define SHM_KEY_1 1111 // current tables 
+#define SHM_KEY_2 2137 // total number of current tables
 
 typedef struct {
     long mtype; // Message type (customer's ID)
@@ -31,6 +31,11 @@ void ignore_sigint(int sig);
 void reap_children();
 int how_many_cashiers_running();
 int customers_running();
+int initialize_semaphore(int sem_id, int sem_num, int initial_value);
+int semaphore_wait(int sem_id, int sem_num);
+int semaphore_signal(int sem_id, int sem_num);
+int get_semaphore_value(int sem_id, int sem_num);
+void remove_semaphore(int sem_id);
 int connect_to_mess_queue();
 int allocate_totalTab_shared_memory();
 void write_totalTab_to_shared_memory(int shmid, int value);
